@@ -2,79 +2,66 @@
 """
 fig3_prism_motif.py
 
-Draw the six‑node triangular prism motif and an external node with three connections.
+Draw the six-node triangular prism motif in the HCP lattice,
+highlighting an external node with three connections (odd boundary degree).
 """
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'paper0'))
-from geom_hcp import make_hcp_positions, build_adj_from_positions
+from mpl_toolkits.mplot3d import Axes3D
 
 def main():
-    # Build positions for a small patch
-    pos_dict = make_hcp_positions(R=4, L=5, a=1.0)
-    # Identify the prism motif: nodes in layer 2 and 3 with certain coordinates
-    # For a clean figure, we'll use a subset and manually define connections.
-    # Alternatively, we can compute positions for specific indices.
-    # Let's pick nodes with (i,j,k) as in the paper:
-    motif_coords = []
-    motif_nodes = [(0,0,2), (1,0,2), (0,1,2), (0,0,3), (1,0,3), (0,1,3)]
-    for n in motif_nodes:
-        if n in pos_dict:
-            motif_coords.append(pos_dict[n])
-    motif_coords = np.array(motif_coords)
-
-    # External node above (should have three connections)
-    external = (0.5, 0.5, 3.5)  # approximate, adjust as needed
-
-    # Plot
     fig = plt.figure(figsize=(10,8))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Plot motif nodes
-    ax.scatter(motif_coords[:,0], motif_coords[:,1], motif_coords[:,2],
-               c='blue', s=100, label='Motif nodes')
+    # Coordinates for the six motif nodes (two triangles)
+    # Bottom triangle (layer z=0)
+    bottom = np.array([[0,0,0], [1,0,0], [0.5, np.sqrt(3)/2, 0]])
+    # Top triangle (layer z=1), shifted for AB stacking
+    top = bottom + np.array([0.5, 0.0, 1.0])
 
-    # Plot external node
-    ax.scatter(*external, c='green', s=200, marker='^', label='External node')
+    # External node above, with three connections to the top triangle
+    external = np.array([0.5, 0.5, 2.0])
 
-    # Draw edges between motif nodes (prism)
-    # Bottom triangle (first three)
+    # Plot nodes
+    ax.scatter(*bottom.T, color='blue', s=100, label='Bottom layer (even)')
+    ax.scatter(*top.T, color='red', s=100, label='Top layer (odd)')
+    ax.scatter(*external, color='green', s=200, marker='^', label='External node (k=3)')
+
+    # Connect edges within motif
     for i in range(3):
-        for j in range(i+1,3):
-            ax.plot([motif_coords[i,0], motif_coords[j,0]],
-                    [motif_coords[i,1], motif_coords[j,1]],
-                    [motif_coords[i,2], motif_coords[j,2]], 'gray', linestyle='--')
-    # Top triangle (last three)
-    for i in range(3,6):
-        for j in range(i+1,6):
-            ax.plot([motif_coords[i,0], motif_coords[j,0]],
-                    [motif_coords[i,1], motif_coords[j,1]],
-                    [motif_coords[i,2], motif_coords[j,2]], 'gray', linestyle='--')
-    # Vertical edges
-    for i in range(3):
-        ax.plot([motif_coords[i,0], motif_coords[i+3,0]],
-                [motif_coords[i,1], motif_coords[i+3,1]],
-                [motif_coords[i,2], motif_coords[i+3,2]], 'gray', linestyle='--')
+        # bottom edges
+        ax.plot([bottom[i][0], bottom[(i+1)%3][0]],
+                [bottom[i][1], bottom[(i+1)%3][1]],
+                [bottom[i][2], bottom[(i+1)%3][2]], color='gray', linestyle='--')
+        # top edges
+        ax.plot([top[i][0], top[(i+1)%3][0]],
+                [top[i][1], top[(i+1)%3][1]],
+                [top[i][2], top[(i+1)%3][2]], color='gray', linestyle='--')
+        # vertical edges
+        ax.plot([bottom[i][0], top[i][0]],
+                [bottom[i][1], top[i][1]],
+                [bottom[i][2], top[i][2]], color='gray', linestyle='--')
 
-    # Draw edges from external node to top triangle
-    for i in range(3,6):
-        ax.plot([external[0], motif_coords[i,0]],
-                [external[1], motif_coords[i,1]],
-                [external[2], motif_coords[i,2]], 'green', linewidth=3)
+    # Connect external node to top triangle
+    for i in range(3):
+        ax.plot([external[0], top[i][0]],
+                [external[1], top[i][1]],
+                [external[2], top[i][2]], color='green', linewidth=3, alpha=0.7)
+
+    # Annotate
+    ax.text(0.5, 0.5, 2.2, "k=3", color='green', fontsize=14)
 
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
-    ax.set_title('Figure 3: Triangular prism motif and odd boundary node')
+    ax.set_title("Figure 3: Triangular prism motif and odd boundary connection")
     ax.legend()
+
     plt.tight_layout()
-    plt.savefig('fig3_prism_motif.pdf')
-    plt.savefig('fig3_prism_motif.png')
-    print("Saved fig3_prism_motif.pdf")
+    plt.savefig('fig3_prism_motif.png', dpi=300, bbox_inches='tight')
+    plt.savefig('fig3_prism_motif.pdf', bbox_inches='tight')
+    print("Generated fig3_prism_motif.png and fig3_prism_motif.pdf")
 
 if __name__ == "__main__":
     main()
