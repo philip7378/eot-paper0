@@ -1,20 +1,16 @@
-
 #!/usr/bin/env python3
 """
 slip_plane_test.py
 
 Test a slip‑plane shift on the HCP lattice: translate one whole layer
 by a lattice vector and verify that interior nodes still have exactly
-6 opposite neighbours.
+6 opposite neighbours. Uses the corrected HCP builder.
 """
 
-import prism_violation as pv  # reuse the HCP builder from prism_violation
+import prism_violation as pv  # now uses fixed builder
 
 def shift_plane_state(state, plane_z, shift=(1,0)):
-    """
-    Shift the whole layer z = plane_z by the vector (shift[0], shift[1], 0).
-    Returns a new state dictionary.
-    """
+    """Shift the whole layer z = plane_z by the vector (shift[0], shift[1], 0)."""
     new_state = dict(state)
     shifted_nodes = [(i,j,k) for (i,j,k) in state if k == plane_z]
     for (i,j,k) in shifted_nodes:
@@ -32,7 +28,6 @@ if __name__ == "__main__":
     plane = 3
     state2 = shift_plane_state(state, plane, shift=(1,0))
 
-    # Only interior nodes (degree 12) matter
     interior = [v for v in adj if len(adj[v]) == 12]
     viol = [v for v in interior if pv.count_opposite(adj, state2, v) != 6]
     print("Slip plane violations:", len(viol))
