@@ -2,38 +2,43 @@
 """
 fig2_hcp_lattice.py
 
-Draw a 3D scatter plot of a small HCP patch with layers colored by parity.
+Draw a 2D projection of the HCP lattice with layers colored by parity.
+Shows three layers (k=0,1,2) with nodes colored according to state (alternating).
 """
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'paper0'))
-from geom_hcp import make_hcp_positions, build_adj_from_positions
+
+def layer_nodes(k, shift, size=2):
+    """Return x,y positions for a triangular layer k, with a given shift."""
+    positions = []
+    for i in range(-size, size+1):
+        for j in range(-size, size+1):
+            if abs(i) + abs(j) + abs(i+j) <= 2*size:  # hexagonal shape
+                x = i + 0.5*j + shift
+                y = (np.sqrt(3)/2) * j
+                positions.append((x, y))
+    return positions
 
 def main():
-    # Generate a small patch
-    pos_dict = make_hcp_positions(R=3, L=4, a=1.0)
-    # Extract coordinates and layer parity
-    nodes = list(pos_dict.keys())
-    coords = np.array([pos_dict[v] for v in nodes])
-    layers = np.array([v[2] for v in nodes])
-    parity = layers % 2
-    colors = ['red' if p==0 else 'blue' for p in parity]
+    fig, ax = plt.subplots(figsize=(10,8))
+    colors = ['red', 'blue']  # colors for two states (layer parity)
+    layers = [0,1,2]
+    shifts = [0.0, 0.5, 0.0]  # ABAB stacking: shift every other layer
 
-    fig = plt.figure(figsize=(10,8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(coords[:,0], coords[:,1], coords[:,2], c=colors, s=50, alpha=0.8)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
-    ax.set_title('Figure 2: HCP lattice with alternating layers (red: even, blue: odd)')
+    for k, shift in zip(layers, shifts):
+        nodes = layer_nodes(k, shift, size=3)
+        color = colors[k % 2]
+        for (x,y) in nodes:
+            ax.plot(x, y, 'o', color=color, markersize=10, markeredgecolor='black')
+
+    ax.set_aspect('equal')
+    ax.set_title("Figure 2: HCP lattice with alternating layers\n(red: even layers, blue: odd layers)")
+    ax.axis('off')
     plt.tight_layout()
-    plt.savefig('fig2_hcp_lattice.pdf')
-    plt.savefig('fig2_hcp_lattice.png')
-    print("Saved fig2_hcp_lattice.pdf")
+    plt.savefig('fig2_hcp_lattice.png', dpi=300, bbox_inches='tight')
+    plt.savefig('fig2_hcp_lattice.pdf', bbox_inches='tight')
+    print("Generated fig2_hcp_lattice.png and fig2_hcp_lattice.pdf")
 
 if __name__ == "__main__":
     main()
