@@ -1,24 +1,28 @@
-
 #!/usr/bin/env python3
 """
-prism_violation.py
+prism_violation.py (parity‑corrected)
 
-Test the six‑node triangular prism flip on a parity‑correct HCP lattice.
-Verifies the Even‑Intersection Lemma: flipping the prism motif violates
-local equilibrium for interior nodes with odd boundary degree.
-
-Outputs the number of violations before and after the flip,
-with sample violating nodes.
+Test the six‑node triangular prism flip on a true HCP lattice with ABAB stacking.
+Implements a combinatorial builder that alternates vertical offsets depending
+on layer parity.
 """
 
-# Offsets for HCP neighbours (corrected for ABAB stacking)
+# Offsets for HCP neighbours (same for all layers)
 SAME_OFFSETS = [(1,0), (-1,0), (0,1), (0,-1), (1,-1), (-1,1)]
-UP_OFFSETS   = [(0,0), (-1,0), (0,-1)]
-DOWN_OFFSETS = [(0,0), (1,0), (0,1)]
+
+# For a layer k, the connections to the layer above (k+1) depend on parity.
+# Even layer (k even):   up offsets = [(0,0), (-1,0), (0,-1)]
+# Odd layer  (k odd):    up offsets = [(0,0), (1,0), (0,1)]
+UP_EVEN = [(0,0), (-1,0), (0,-1)]
+UP_ODD  = [(0,0), (1,0), (0,1)]
+
+# Down offsets are the opposite of up offsets of the other layer.
+# They will be derived automatically from up offsets when building.
 
 def build_hcp_patch(R=5, L=6):
     """
     Build a finite HCP patch with horizontal radius R and L layers.
+    Correct ABAB stacking: vertical neighbours depend on layer parity.
     Returns adjacency dict: node -> set of neighbours.
     Nodes are tuples (i,j,k).
     """
@@ -28,20 +32,28 @@ def build_hcp_patch(R=5, L=6):
     nodeset = set(nodes)
     adj = {n: set() for n in nodes}
     for (i,j,k) in nodes:
-        # same layer neighbours
+        # same layer neighbours (always present)
         for di,dj in SAME_OFFSETS:
             nb = (i+di, j+dj, k)
             if nb in nodeset:
                 adj[(i,j,k)].add(nb)
-        # up layer
+
+        # up neighbours (layer k+1)
         if k+1 < L:
-            for di,dj in UP_OFFSETS:
+            # choose offsets based on parity of current layer
+            up_offs = UP_EVEN if (k % 2 == 0) else UP_ODD
+            for di,dj in up_offs:
                 nb = (i+di, j+dj, k+1)
                 if nb in nodeset:
                     adj[(i,j,k)].add(nb)
-        # down layer
+
+        # down neighbours (layer k-1)
         if k-1 >= 0:
-            for di,dj in DOWN_OFFSETS:
+            # down offsets are the same as the up offsets of the layer below
+            # but we can derive them by symmetry: the down offsets for layer k
+            # are the up offsets of layer k-1.
+            down_offs = UP_EVEN if ((k-1) % 2 == 0) else UP_ODD
+            for di,dj in down_offs:
                 nb = (i+di, j+dj, k-1)
                 if nb in nodeset:
                     adj[(i,j,k)].add(nb)
@@ -62,23 +74,20 @@ if __name__ == "__main__":
     # Triangular prism motif: three nodes in layer 2 and three in layer 3
     M = [(0,0,2), (1,0,2), (0,1,2), (0,0,3), (1,0,3), (0,1,3)]
     motif = {v for v in M if v in adj}
-    # All nodes possibly affected (motif + neighbours)
     affected = set(motif)
     for v in motif:
         affected.update(adj[v])
-    # Only interior nodes (degree 12) are checked
     interior = [v for v in affected if len(adj[v]) == 12]
 
-    # Pre‑flip check
+    # pre‑flip check
     init_viol = sum(1 for v in interior if count_opposite(adj, state, v) != 6)
     print("Initial violations:", init_viol)
 
-    # Flip motif
+    # flip motif
     state2 = dict(state)
     for v in motif:
         state2[v] = 1 - state2[v]
 
-    # Collect violations after flip
     motif_viol, boundary_viol = [], []
     for v in interior:
         c = count_opposite(adj, state2, v)
